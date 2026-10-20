@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qora Dashboard - Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .stat-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; border-bottom: 5px solid #3b82f6; transition: transform 0.2s; }
+        .stat-box:hover { transform: translateY(-5px); }
+        .stat-number { font-size: 32px; font-weight: 800; color: #1e293b; }
+        .table-hover tbody tr:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="py-5">
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary fw-bold m-0">🚀 Qora Bug Tracker <span class="badge bg-secondary fs-6 align-middle">Enterprise</span></h2>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Keluar (Logout)</button>
+        </div>
+        
+        <div id="loading" class="alert alert-info text-center fw-bold shadow-sm">Sinkronisasi dengan server database...</div>
+
+        <div id="main-content" style="display: none;">
+            <!-- Baris Statistik -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stat-box">
+                        <div class="text-secondary fw-semibold text-uppercase tracking-wide">Total Project</div>
+                        <div class="stat-number" id="tot-project">0</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-box">
+                        <div class="text-secondary fw-semibold text-uppercase tracking-wide">Total Bug</div>
+                        <div class="stat-number" id="tot-bug">0</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-box">
+                        <div class="text-secondary fw-semibold text-uppercase tracking-wide">User Terdaftar</div>
+                        <div class="stat-number" id="tot-user">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Daftar Bug -->
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                    <h5 class="mb-0 fw-bold text-dark">📋 Daftar Laporan Bug</h5>
+                    <button class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalTambahBug">
+                        + Laporkan Bug Baru
+                    </button>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">ID</th>
+                                <th>Judul Bug</th>
+                                <th>Project</th>
+                                <th>Prioritas</th>
+                                <th>Status</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bug-table-body">
+                            <!-- Data tabel dari JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form Tambah Bug -->
+    <div class="modal fade" id="modalTambahBug" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Laporkan Bug Baru</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formTambahBug">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Judul Bug</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">ID Project</label>
+                            <input type="number" class="form-control" name="project_id" value="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Deskripsi</label>
+                            <textarea class="form-control" name="description" rows="3" required></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="form-label fw-semibold">Severity</label>
+                                <select class="form-select" name="severity">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-semibold">Prioritas</label>
+                                <select class="form-select" name="priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Bukti Gambar (Opsional)</label>
+                            <input type="file" class="form-control" name="evidence" accept="image/*">
+                        </div>
+                        <input type="hidden" name="status" value="open">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" id="btnSubmit">Kirim Laporan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BARU: Lihat Bukti -->
+    <div class="modal fade" id="modalLihatBukti" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">🖼️ Bukti Bug</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4 bg-light">
+                    <img id="gambarBukti" src="" class="img-fluid rounded shadow-sm" alt="Bukti Bug" style="max-height: 70vh; display: none;">
+                    <div id="teksTanpaBukti" class="py-5 text-muted" style="display: none;">
+                        <h4 class="fw-bold">Tidak ada bukti gambar 🤷‍♂️</h4>
+                        <p>Pelapor tidak melampirkan file gambar untuk bug ini.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BARU: Ubah Status Bug -->
+    <div class="modal fade" id="modalUbahStatus" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold">✏️ Ubah Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formUbahStatus">
+                        <input type="hidden" id="edit-bug-id">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Status Baru</label>
+                            <select class="form-select" id="edit-bug-status" required>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold" id="btnUpdateStatus">Simpan Status</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 🚨 JANGAN LUPA: PASTE TOKEN DARI THUNDER CLIENT DI SINI LAGI 🚨
+        const myToken = "5|tpQaxBPcGYupFq6QGsecJZDRqsZlMHjwxktE2TqQ91c65566"; 
+        
+        const headersGet = {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + myToken
+        };
+
+        function loadData() {
+            fetch('http://127.0.0.1:8000/api/dashboard', { headers: headersGet })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('tot-project').innerText = data.data.totals.projects;
+                document.getElementById('tot-bug').innerText = data.data.totals.bugs;
+                document.getElementById('tot-user').innerText = data.data.totals.users;
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+            });
+
+            fetch('http://127.0.0.1:8000/api/bugs', { headers: headersGet })
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('bug-table-body');
+                tbody.innerHTML = ""; 
+                const bugs = data.data.data; 
+
+                bugs.forEach(bug => {
+                    let statusColor = bug.status === 'resolved' ? 'success' : 
+                                      bug.status === 'in_progress' ? 'warning' : 
+                                      bug.status === 'closed' ? 'secondary' : 'danger';
+                    
+                    let projectName = bug.project ? bug.project.name : '-';
+                    
+                    // Logika Path Gambar yang sudah diperbaiki
+                    let evidenceUrl = null;
+                    if (bug.evidence) {
+                        let cleanPath = bug.evidence.replace('public/', ''); 
+                        if (cleanPath.startsWith('http')) {
+                            evidenceUrl = `'${cleanPath}'`;
+                        } else {
+                            evidenceUrl = `'http://127.0.0.1:8000/storage/${cleanPath}'`;
+                        }
+                    }
+
+                    const row = `
+                        <tr>
+                            <td class="px-4 text-muted fw-bold">#${bug.id}</td>
+                            <td class="fw-bold text-dark">${bug.title}</td>
+                            <td>${projectName}</td>
+                            <td><span class="badge bg-secondary rounded-pill px-3">${bug.priority}</span></td>
+                            <td><span class="badge bg-${statusColor} rounded-pill px-3">${bug.status}</span></td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-info fw-bold" onclick="lihatBukti(${evidenceUrl})">
+                                        📷 Bukti
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning fw-bold" onclick="bukaModalUbahStatus(${bug.id}, '${bug.status}')">
+                                        ✏️ Ubah
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            });
+        }
+
+        loadData();
+
+        // Modal Lihat Bukti
+        function lihatBukti(url) {
+            const imgEl = document.getElementById('gambarBukti');
+            const noImgEl = document.getElementById('teksTanpaBukti');
+
+            if (url) {
+                imgEl.src = url;
+                imgEl.style.display = 'inline-block';
+                noImgEl.style.display = 'none';
+            } else {
+                imgEl.src = '';
+                imgEl.style.display = 'none';
+                noImgEl.style.display = 'block';
+            }
+            var modalBukti = new bootstrap.Modal(document.getElementById('modalLihatBukti'));
+            modalBukti.show();
+        }
+
+        // Buka Modal Ubah Status
+        function bukaModalUbahStatus(id, currentStatus) {
+            document.getElementById('edit-bug-id').value = id;
+            document.getElementById('edit-bug-status').value = currentStatus;
+            
+            var modalUbah = new bootstrap.Modal(document.getElementById('modalUbahStatus'));
+            modalUbah.show();
+        }
+
+        // Logout
+        function logout() {
+            if(confirm("Apakah omm yakin ingin keluar?")) {
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top: 20%; font-family:sans-serif;'>Sesi telah berakhir. Silakan login kembali di Thunder Client. 👋</h2>";
+            }
+        }
+
+        // Kirim Laporan Bug Baru (POST)
+        document.getElementById('formTambahBug').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.innerText = "Mengirim...";
+            btnSubmit.disabled = true;
+
+            const formData = new FormData(this);
+
+            fetch('http://127.0.0.1:8000/api/bugs', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer ' + myToken
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.message) {
+                    alert("Sukses: " + data.message); 
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('modalTambahBug'));
+                    myModal.hide();
+                    document.getElementById('formTambahBug').reset();
+                    loadData(); 
+                } else {
+                    alert("Gagal mengirim data! Cek console.");
+                }
+            })
+            .catch(err => console.error('Error:', err))
+            .finally(() => {
+                btnSubmit.innerText = "Kirim Laporan";
+                btnSubmit.disabled = false;
+            });
+        });
+
+        // Update Status Bug (PUT)
+        document.getElementById('formUbahStatus').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btnUpdate = document.getElementById('btnUpdateStatus');
+            btnUpdate.innerText = "Menyimpan...";
+            btnUpdate.disabled = true;
+
+            const bugId = document.getElementById('edit-bug-id').value;
+            const newStatus = document.getElementById('edit-bug-status').value;
+
+            // Karena ini proses update data teks biasa, kita bisa pakai JSON
+            fetch(`http://127.0.0.1:8000/api/bugs/${bugId}`, {
+                method: 'PUT',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + myToken
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.message) {
+                    alert("Status berhasil diperbarui! Cek Mailtrap omm untuk melihat email notifikasinya ✉️🚀");
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('modalUbahStatus'));
+                    myModal.hide();
+                    loadData(); // Langsung update warna badge di tabel
+                } else {
+                    alert("Gagal update data! Cek console.");
+                }
+            })
+            .catch(err => console.error('Error:', err))
+            .finally(() => {
+                btnUpdate.innerText = "Simpan Status";
+                btnUpdate.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
